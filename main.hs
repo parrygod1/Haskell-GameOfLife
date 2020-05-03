@@ -1,36 +1,27 @@
 data Cell = Alive | Dead deriving (Eq, Show)
 type GridPoint = (Integer, Integer)
-type Grid = [ [ (GridPoint, Cell) ] ]
-
-initLine :: Integer -> Integer -> [(GridPoint, Cell)] 
-initLine line maxCol = [ ((line, y), Dead) | y <- [0..maxCol] ]
+type Grid = [ (GridPoint, Cell) ]
 
 initGrid :: Integer -> Integer -> Grid
-initGrid maxLines maxCol = [ initLine x maxCol | x <- [0..maxLines] ]  
+initGrid maxLines maxCol = [ ((x, y), Alive) | x <- [0..maxLines], y <- [0..maxCol]]  
 
 printCell :: Cell -> String
 printCell c = if c == Alive then "x" else "."
 
-printGridLine :: [(GridPoint, Cell)] -> String
-printGridLine ((a, cell) : rest) = printCell cell ++ printGridLine rest
-printGridLine _ = ""
-
 printGrid :: Grid -> String
-printGrid (line : rest) = (printGridLine line) ++ "\n" ++ (printGrid rest)
+printGrid (((x,y), cell) : rest) = 
+    if y == maxy then printCell cell ++ "\n" ++ printGrid rest
+    else printCell cell ++ printGrid rest
 printGrid _ = ""
 
 adjacents :: GridPoint -> [GridPoint]
 adjacents (x,y) = [(x+m, y+n) | m <- [-1,0,1], n <- [-1,0,1], (m,n) /= (0,0)]
 
-getAdjCells1 :: Grid -> GridPoint -> [Cell]
-getAdjCells1 (line : rest) p =  (getAdjCells2 line (adjacents p)) ++ (getAdjCells1 rest p)
-getAdjCells1 _ _ = []
-
-getAdjCells2 :: [(GridPoint, Cell)] -> [GridPoint] -> [Cell]
-getAdjCells2 ((p, cell) : rest) targetList = 
-    if (elem p targetList) then [cell] ++ (getAdjCells2 rest targetList)
-    else (getAdjCells2 rest targetList)
-getAdjCells2 _ _ = []
+getAdjCells :: [GridPoint] -> Grid -> [Cell]
+getAdjCells targets ((point, cell) : rest) = 
+    if elem point targets then [cell] ++ getAdjCells targets rest
+    else getAdjCells targets rest
+getAdjCells _ _ = []
 
 nextStep :: Cell -> [Cell] -> Cell
 nextStep Alive list 
@@ -44,10 +35,15 @@ nextStep Dead list
 count :: Eq a => a -> [a] -> Int
 count x = length . filter (== x)
 
---matrixOp :: Grid -> Grid
---matrixOp (line : rest) =  
+progressMatrix :: [ (GridPoint, Cell) ] -> Grid -> Grid
+progressMatrix ((p, c) : rest) g = [ (p, (nextStep c (getAdjCells (adjacents p) g))) ] ++ progressMatrix rest g
+progressMatrix _ _= []
 
-test = initGrid 10 10
+maxx = 10
+maxy = 20      
+test = initGrid maxx maxy
 
 main :: IO()
-main = putStrLn (printGrid test)
+main = do 
+    putStrLn (printGrid test)
+    putStrLn (printGrid (progressMatrix test test))
