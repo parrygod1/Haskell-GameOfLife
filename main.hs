@@ -2,8 +2,14 @@ data Cell = Alive | Dead deriving (Eq, Show)
 type GridPoint = (Integer, Integer)
 type Grid = [ (GridPoint, Cell) ]
 
+--use random
+getCell :: Integer -> Integer -> Cell
+getCell a b = if (a+b) `mod` 2 == 0
+    then Alive
+    else Dead
+
 initGrid :: Integer -> Integer -> Grid
-initGrid maxLines maxCol = [ ((x, y), Alive) | x <- [0..maxLines], y <- [0..maxCol]]  
+initGrid maxLines maxCol = [ ((x, y), (getCell x y)) | x <- [0..maxLines], y <- [0..maxCol]]  
 
 printCell :: Cell -> String
 printCell c = if c == Alive then "x" else "."
@@ -35,15 +41,27 @@ nextStep Dead list
 count :: Eq a => a -> [a] -> Int
 count x = length . filter (== x)
 
+--first arg is remaining list, second the whole grid
 progressMatrix :: [ (GridPoint, Cell) ] -> Grid -> Grid
 progressMatrix ((p, c) : rest) g = [ (p, (nextStep c (getAdjCells (adjacents p) g))) ] ++ progressMatrix rest g
 progressMatrix _ _= []
 
 maxx = 10
-maxy = 20      
-test = initGrid maxx maxy
+maxy = 30     
+grid1 = initGrid maxx maxy
 
 main :: IO()
 main = do 
-    putStrLn (printGrid test)
-    putStrLn (printGrid (progressMatrix test test))
+    putStrLn (printGrid grid1)
+    getCmd "" grid1
+
+
+getCmd :: String -> Grid -> IO()
+getCmd acc g = do
+    c <- getChar
+    case c of
+      '\n' -> do 
+            let grid = progressMatrix g g
+            putStrLn (printGrid grid)
+            getCmd "" grid
+      _ -> getCmd (c:acc) g
