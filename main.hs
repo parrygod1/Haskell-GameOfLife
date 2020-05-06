@@ -1,8 +1,12 @@
-data Cell = Alive | Dead deriving (Eq, Show)
+data Cell = Alive | Dead deriving (Eq)
 type GridPoint = (Integer, Integer)
 type Grid = [ (GridPoint, Cell) ]
 
---use random
+instance Show Cell where
+    show Alive = "x"
+    show Dead = "."
+
+--TODO: use random
 getCell :: Integer -> Integer -> Cell
 getCell a b = if (a+b) `mod` 2 == 0
     then Alive
@@ -11,15 +15,13 @@ getCell a b = if (a+b) `mod` 2 == 0
 initGrid :: Integer -> Integer -> Grid
 initGrid maxLines maxCol = [ ((x, y), (getCell x y)) | x <- [0..maxLines], y <- [0..maxCol]]  
 
-printCell :: Cell -> String
-printCell c = if c == Alive then "x" else "."
+stringGrid :: Grid -> String
+stringGrid (((x,y), cell) : rest) = 
+    if y == maxy then show cell ++ "\n" ++ stringGrid rest
+    else show cell ++ stringGrid rest
+stringGrid _ = ""
 
-printGrid :: Grid -> String
-printGrid (((x,y), cell) : rest) = 
-    if y == maxy then printCell cell ++ "\n" ++ printGrid rest
-    else printCell cell ++ printGrid rest
-printGrid _ = ""
-
+--TODO: make data for remembering adjacent cells so this doesn't get called every step
 adjacents :: GridPoint -> [GridPoint]
 adjacents (x,y) = [(x+m, y+n) | m <- [-1,0,1], n <- [-1,0,1], (m,n) /= (0,0)]
 
@@ -52,16 +54,17 @@ grid1 = initGrid maxx maxy
 
 main :: IO()
 main = do 
-    putStrLn (printGrid grid1)
-    getCmd "" grid1
+    putStrLn (stringGrid grid1)
+    getCmd grid1
 
 
-getCmd :: String -> Grid -> IO()
-getCmd acc g = do
+getCmd :: Grid -> IO()
+getCmd g = do
     c <- getChar
     case c of
+      '\t' -> return ()
       '\n' -> do 
             let grid = progressMatrix g g
-            putStrLn (printGrid grid)
-            getCmd "" grid
-      _ -> getCmd (c:acc) g
+            putStrLn (stringGrid grid)
+            getCmd grid
+      _ -> getCmd g
