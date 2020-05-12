@@ -1,13 +1,14 @@
 import Graphics.Gloss
 
+
 window :: Display
-window = InWindow "Nice Window" (200, 200) (10, 10)
+window = InWindow "Game of Life" (600, 600) (500, 200)
 
 background :: Color
 background = white
 
 drawing :: Picture
-drawing = circle 80
+drawing = rectangleSolid 80 80
 
 main :: IO ()
-main = display window background drawing
+main = display window background drawingn
