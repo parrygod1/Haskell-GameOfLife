@@ -48,6 +48,6 @@ main = do
     putStrLn "Enter input file: "
     file <- getLine
     contents <- readFile file 
-    putStrLn ("Generation " ++ ['0'])
+    putStrLn "Generation 0"
     putStrLn (stringGrid (parseGrid contents 0 0) maxx maxy)
     getCmd (parseGrid contents 0 0) history 0
