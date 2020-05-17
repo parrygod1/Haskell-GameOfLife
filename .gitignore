@@ -4,3 +4,5 @@ Gameoflife.o
 Gameoflife.hi
 glossexample.o
 gamoflife.exe
+.vscode/launch.json
+.vscode/tasks.json

@@ -8,7 +8,7 @@ module Gameoflife (
     progressMatrix
 ) where
 
-data Cell = Alive | Dead deriving (Eq)
+data Cell = Alive | Dead deriving (Eq, Ord)
 type GridPoint = (Integer, Integer)
 type Grid = [ (GridPoint, Cell) ]
 type History = [Grid]
