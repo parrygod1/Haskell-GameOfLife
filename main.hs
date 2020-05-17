@@ -1,53 +1,124 @@
-import System.IO  
-import Control.Monad
 import Gameoflife
+import Readgrid
+import Graphics.Gloss
+import Graphics.Gloss.Interface.IO.Game
+import Data.Array
+import Data.Set
 
-maxx = 10
-maxy = 30     
-history :: History
-history = []
+--Gloss screen center is (0,0) so we need to draw Grid with an offset
+offsetX = maxx `div` 2
+offsetY = maxy `div` 2
+squareSize = 30 :: Float
 
-getCmd :: Grid -> History -> Generation -> IO()
-getCmd g h gen = do
-    c <- getChar
-    case c of
-        's' -> return ()
-        'f' -> do 
-            let newH = h ++ [g]
-            let grid = progressMatrix g g 
-            let generation = gen + 1
-            putStrLn ("Generation " ++ show generation)
-            putStrLn (stringGrid grid maxx maxy)
-            getCmd grid newH generation
-        'b' -> 
-            if not (null h) then 
-                do
-                let grid = last h
-                let generation = gen - 1
-                putStrLn ("Generation " ++ show generation)
-                putStrLn (stringGrid grid maxx maxy)
-                getCmd grid (init h) generation
-            else
-                do
-                putStrLn "History is empty"
-                getCmd g h gen
-        _ -> getCmd g h gen
+resX = 800
+resY = 800
 
+maxx = 20
+maxy = 20 
 
-parseGrid :: String -> Integer -> Integer -> Grid
-parseGrid (char : rest) x y 
-    | char == head (show Alive) = [((x,y), Alive)] ++ parseGrid rest x (y+1)
-    | char == head (show Dead) = [((x,y), Dead)] ++ parseGrid rest x (y+1)
-    | char == '\n' = parseGrid rest (x+1) 0
-    | otherwise = parseGrid rest x y
-parseGrid _ _ _ = []
+keyNext = Char 'f'
+keyPrev = Char 'b'
 
+backgroundColor = white
+window = InWindow "Game of Life" (fromInteger resX, fromInteger resY) (500, 200)
 
-main :: IO()
-main = do 
+data Game = Game { keys :: Set Key,
+                    grid :: Grid,
+                    history :: Array Integer Grid,
+                    historySize :: Integer,
+                    generation :: Integer }
+
+intToFloat :: Integer -> Float
+intToFloat i = fromIntegral i 
+
+floatToInt :: Float -> Integer
+floatToInt f = toInteger $ round squareSize
+
+mulIntFloat :: Integer -> Float -> Float
+mulIntFloat i f = intToFloat $ i * (floatToInt f)
+
+gridToPictures :: Grid -> [Picture]
+gridToPictures (((line, col), cell) : rest) = 
+    if cell == Alive then
+        [translate xcoord ycoord alivecell] ++ gridToPictures rest
+    else 
+        [translate xcoord ycoord deadcell] ++ gridToPictures rest
+    where
+        xcoord = mulIntFloat (col - offsetX) squareSize
+        ycoord = mulIntFloat ((-1 * line) + offsetY) squareSize
+        alivecell = rectangleSolid squareSize squareSize
+        deadcell = rectangleWire squareSize squareSize
+gridToPictures _ = []    
+
+generationAsPicture :: Game -> Picture
+generationAsPicture game = translate xcoord ycoord $ scale 0.15 0.15 $ color black $ text $ "Generation " ++ show (generation game) 
+                                                                                    ++ " " ++ show (fromIntegral (historySize game))
+                        where 
+                            xcoord = -60
+                            ycoord = intToFloat $ (0 + resY `div` 2) - 20
+
+gameAsPicture :: Game -> Picture
+gameAsPicture game = Pictures ((gridToPictures (grid game)) ++ [(generationAsPicture game)])
+
+handleInput :: Event -> Game -> Game
+handleInput (EventKey k Up _ _) game = game { keys = insert k (keys game)}
+handleInput _ game = game 
+
+nextGeneration :: Game -> Integer -> Grid
+nextGeneration game gen = if gen < (historySize game)-1 then
+                          (history game) ! ((generation game)+1)
+                        else
+                            progressMatrix (grid game) (grid game)
+       
+previousGeneration :: Game -> Grid
+previousGeneration game = if (generation game) > 0 then
+                             (history game) ! ((generation game)-1)
+                        else
+                            if historySize game > 0 then
+                                (history game) ! 0
+                            else []
+
+subtractGeneration :: Game -> Integer
+subtractGeneration game = if generation game > 0 then (generation game) - 1 else (generation game)
+
+incrementHistSize :: Game -> Integer
+incrementHistSize game = if (generation game) - 1 < (historySize game)-1 then
+                            historySize game
+                        else
+                            (historySize game) + 1
+
+transformGame :: Float -> Game -> Game
+transformGame _ game 
+    | member keyNext (keys game) = do
+        game {  
+                history = (history game)//[(generation game, grid game)],
+                historySize = incrementHistSize game,         
+                generation = (generation game) + 1,
+                grid = nextGeneration game ((generation game) + 1), 
+                keys = delete keyNext (keys game)
+            }
+    | member keyPrev (keys game) = do
+        game { 
+                generation = subtractGeneration game, 
+                grid = previousGeneration game, 
+                keys = delete keyPrev (keys game), 
+                history = history game,
+                historySize = historySize game
+            }
+    | otherwise = game
+
+main :: IO ()
+main = do
     putStrLn "Enter input file: "
     file <- getLine
     contents <- readFile file 
-    putStrLn "Generation 0"
-    putStrLn (stringGrid (parseGrid contents 0 0) maxx maxy)
-    getCmd (parseGrid contents 0 0) history 0
+
+    let initialGame = Game {
+        grid = (parseGrid contents 0 0),
+        keys = empty,
+        history = listArray (0, 1000) [],
+        historySize = 0,
+        generation = 0
+    }
+
+    play window backgroundColor 60 initialGame gameAsPicture handleInput transformGame
