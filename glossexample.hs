@@ -1,6 +1,7 @@
 import Gameoflife
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Game
+import Data.Array
 import Data.Set
 
 --Gloss screen center is (0,0) so we need to draw Grid with an offset
@@ -22,13 +23,15 @@ window = InWindow "Game of Life" (fromInteger resX, fromInteger resY) (500, 200)
 
 data Game = Game { keys :: Set Key,
                     grid :: Grid,
-                    history :: Set Grid,
+                    history :: Array Integer Grid,
+                    historySize :: Integer,
                     generation :: Integer }
 
 initialGame = Game {
     grid = initGrid maxx maxy,
     keys = empty,
-    history = empty,
+    history = listArray (0, 100) [],
+    historySize = 0,
     generation = 0
 }
 
@@ -56,7 +59,7 @@ gridToPictures _ = []
 
 generationAsPicture :: Game -> Picture
 generationAsPicture game = translate xcoord ycoord $ scale 0.15 0.15 $ color black $ text $ "Generation " ++ show (generation game) 
-                                                                                    ++ " " ++ show (fromIntegral (size (history game)))
+                                                                                    ++ " " ++ show (fromIntegral (historySize game))
                         where 
                             xcoord = -60
                             ycoord = intToFloat $ (0 + resY `div` 2) - 20
@@ -69,30 +72,34 @@ handleInput (EventKey k Up _ _) game = game { keys = insert k (keys game)}
 handleInput _ game = game 
 
 nextGeneration :: Game -> Integer -> Grid
-nextGeneration game gen = if gen < fromIntegral (size (history game))-1 then
-                            elemAt (fromInteger (generation game)+1) (history game)
+nextGeneration game gen = if gen < (historySize game)-1 then
+                          (history game) ! ((generation game)+1)
                         else
                             progressMatrix (grid game) (grid game)
        
 previousGeneration :: Game -> Grid
 previousGeneration game = if (generation game) > 0 then
-                            elemAt (fromInteger (generation game)-1) (history game)
+                             (history game) ! ((generation game)-1)
                         else
-                            if fromIntegral (size (history game)) > 0 then
-                                elemAt 0 (history game)
+                            if historySize game > 0 then
+                                (history game) ! 0
                             else []
 
 subtractGeneration :: Game -> Integer
 subtractGeneration game = if generation game > 0 then (generation game) - 1 else (generation game)
 
-addToHistory :: Game -> Set Grid
-addToHistory game = insert (grid game) (history game)
+incrementHistSize :: Game -> Integer
+incrementHistSize game = if (generation game) - 1 < (historySize game)-1 then
+                            historySize game
+                        else
+                            (historySize game) + 1
 
 transformGame :: Float -> Game -> Game
 transformGame _ game 
     | member keyNext (keys game) = do
         game {  
-                history = addToHistory game,                
+                history = (history game)//[(generation game, grid game)],
+                historySize = incrementHistSize game,         
                 generation = (generation game) + 1,
                 grid = nextGeneration game ((generation game) + 1), 
                 keys = delete keyNext (keys game)
@@ -102,7 +109,8 @@ transformGame _ game
                 generation = subtractGeneration game, 
                 grid = previousGeneration game, 
                 keys = delete keyPrev (keys game), 
-                history = history game
+                history = history game,
+                historySize = historySize game
             }
     | otherwise = game
 
