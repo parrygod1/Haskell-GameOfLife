@@ -36,13 +36,7 @@ getCmd g h gen = do
 -}
 
 
-parseGrid :: String -> Integer -> Integer -> Grid
-parseGrid (char : rest) x y 
-    | char == head (show Alive) = [((x,y), Alive)] ++ parseGrid rest x (y+1)
-    | char == head (show Dead) = [((x,y), Dead)] ++ parseGrid rest x (y+1)
-    | char == '\n' = parseGrid rest (x+1) 0
-    | otherwise = parseGrid rest x y
-parseGrid _ _ _ = []
+
 
 
 readGrid :: Integer -> Integer -> IO ()

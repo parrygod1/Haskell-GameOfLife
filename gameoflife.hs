@@ -1,12 +1,18 @@
 module Gameoflife (
     Cell(Alive, Dead),
+    GridPoint,
     Grid,
     History,
     Generation,
     initGrid,
     stringGrid,
-    progressMatrix
+    progressMatrix,
+    parseGrid,
+    getPointList
 ) where
+
+import Data.Map as M
+
 
 data Cell = Alive | Dead deriving (Eq, Ord)
 type GridPoint = (Integer, Integer)
@@ -18,7 +24,7 @@ instance Show Cell where
     show Alive = "x"
     show Dead = "."
 
---TODO: use random
+--formula for grid setup
 getCell :: Integer -> Integer -> Cell
 getCell a b = if (a+b) `mod` 2 == 0
     then Alive
@@ -26,6 +32,7 @@ getCell a b = if (a+b) `mod` 2 == 0
 
 initGrid :: Integer -> Integer -> Grid
 initGrid maxLines maxCol = [ ((x, y), (getCell x y)) | x <- [0..maxLines], y <- [0..maxCol]]  
+------------------------
 
 stringGrid :: Grid -> Integer -> Integer -> String
 stringGrid (((x,y), cell) : rest) boundX boundY = 
@@ -53,9 +60,25 @@ nextStep Dead list
     | otherwise = Dead
 
 count :: Eq a => a -> [a] -> Int
-count x = length . filter (== x)
+count x = length . Prelude.filter (== x)
 
 --first arg is remaining list, second the whole grid
 progressMatrix :: [ (GridPoint, Cell) ] -> Grid -> Grid
 progressMatrix ((p, c) : rest) g = [ (p, (nextStep c (getAdjCells (adjacents p) g))) ] ++ progressMatrix rest g
 progressMatrix _ _= []
+
+parseGrid :: String -> Integer -> Integer -> Grid
+parseGrid (char : rest) x y 
+    | char == head (show Alive) = [((x,y), Alive)] ++ parseGrid rest x (y+1)
+    | char == head (show Dead) = [((x,y), Dead)] ++ parseGrid rest x (y+1)
+    | char == '\n' = parseGrid rest (x+1) 0
+    | otherwise = parseGrid rest x y
+parseGrid _ _ _ = []
+
+getPointList :: Grid -> Int -> [(GridPoint, Int)]
+getPointList ((point, cell) : rest) index = [(point, index)] ++ (getPointList rest (index+1))
+getPointList _ _ = []
+
+
+
+
