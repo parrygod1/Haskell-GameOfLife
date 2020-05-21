@@ -1,9 +1,9 @@
 import Gameoflife
+import Data.Array as A
+import Data.Map as M
+import Data.Set as S
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Game
-import Data.Array as A
-import Data.Set as S
-import Data.Map as M
 
 --Gloss screen center is (0,0) so we need to draw Grid with an offset
 offsetX = maxx `div` 2
@@ -36,9 +36,10 @@ data Game = Game { kbkeys :: S.Set Key,
                     history :: Array Integer Grid,
                     historySize :: Integer,
                     generation :: Integer,
-                    posIndexMap :: Map GridPoint Int, 
-                    x :: Float,
-                    y :: Float }
+                    posIndexMap :: Map GridPoint Int,
+                    posAdjMap :: Map GridPoint [Int],
+                    boundX :: Integer,
+                    boundY :: Integer }
 
 intToFloat :: Integer -> Float
 intToFloat i = fromIntegral i 
@@ -90,14 +91,15 @@ handleInput (EventKey (MouseButton LeftButton) Up _ (mouseX, mouseY)) game = gam
                     where 
                         line =  ((abs resY) `div` (floatToInt mouseY)) `div` 10
                         col = ((abs resX) `div` (floatToInt mouseX)) `div` 10
-handleInput (EventKey k Up _ _) game = game { kbkeys = S.insert k (kbkeys game)}
+handleInput (EventKey k Down _ _) game = game { kbkeys = S.insert k (kbkeys game)}
+handleInput (EventKey k Up _ _) game = game { kbkeys = S.delete k (kbkeys game)}
 handleInput _ game = game
 
 nextGeneration :: Game -> Integer -> Grid
 nextGeneration game gen = if gen < (historySize game)-1 then
                           (history game) A.! ((generation game)+1)
                         else
-                            progressMatrix (grid game) (grid game)
+                            progressMatrix (grid game) (grid game) (posAdjMap game)
        
 previousGeneration :: Game -> Grid
 previousGeneration game = if (generation game) > 0 then
@@ -118,14 +120,15 @@ incrementHistSize game = if (generation game) - 1 < (historySize game)-1 then
 
 --Use a map to quickly access index of a point calculated from the direction we want to move
 adjDirectionCell :: (GridPoint, Cell) -> Game -> GridPoint -> Integer -> Integer -> (GridPoint, Cell)
-adjDirectionCell ((a, b), cell) game (d1, d2) boundL boundC = 
+adjDirectionCell ((a, b), cell) game (d1, d2) boundL boundC = --bounds for lines and columns
     if a+d1 >= 0 && a+d1 <= boundL && b+d2 >= 0 && b+d2 <= boundC then
         ((a,b), snd ((grid game) !! ((posIndexMap game) M.! (a+d1, b+d2))))
     else
         ((a,b), Dead)
 
-calcShiftedGrid :: Grid -> Game -> (Integer, Integer) -> Grid                       --calc bounds here!!
-calcShiftedGrid (elem : rest) game direction = [(adjDirectionCell elem game direction 23 23)] ++ calcShiftedGrid rest game direction
+calcShiftedGrid :: Grid -> Game -> (Integer, Integer) -> Grid
+calcShiftedGrid (elem : rest) game direction = [newCell] ++ calcShiftedGrid rest game direction
+    where newCell = (adjDirectionCell elem game direction (boundY game) (boundX game))
 calcShiftedGrid _ _ _ = []
 
 shiftGrid :: Game -> (Integer, Integer) -> Grid
@@ -162,23 +165,23 @@ transformGame _ game
             }
     | S.member keyLeft (kbkeys game) = do
         game {
-                grid = shiftGrid game dirLeft,
-                kbkeys = S.delete keyLeft (kbkeys game)
+                grid = shiftGrid game dirLeft
+                --kbkeys = S.delete keyLeft (kbkeys game)
         }
     | S.member keyRight (kbkeys game) = do
         game {
-                grid = shiftGrid game dirRight,
-                kbkeys = S.delete keyRight (kbkeys game)
+                grid = shiftGrid game dirRight
+                --kbkeys = S.delete keyRight (kbkeys game)
         }
     | S.member keyUp (kbkeys game) = do
         game {
-                grid = shiftGrid game dirUp,
-                kbkeys = S.delete keyUp (kbkeys game)
+                grid = shiftGrid game dirUp
+                --kbkeys = S.delete keyUp (kbkeys game)
         }
     | S.member keyDown (kbkeys game) = do
         game {
-                grid = shiftGrid game dirDown,
-                kbkeys = S.delete keyDown (kbkeys game)
+                grid = shiftGrid game dirDown
+                --kbkeys = S.delete keyDown (kbkeys game)
         }
     | otherwise = game
     where 
@@ -193,6 +196,8 @@ main = do
     file <- getLine
     contents <- readFile file 
     let newGrid = (parseGrid contents 0 0)
+    let map1 = M.fromList (getPointList newGrid 0)
+    let map2 = M.fromList (calcAllAdjacents newGrid map1)
 
     let initialGame = Game {
         grid = newGrid,
@@ -200,9 +205,10 @@ main = do
         history = listArray (0, 1000) [],
         historySize = 0,
         generation = 0,
-        posIndexMap = M.fromList (getPointList newGrid 0),
-        x=0.0,
-        y=0.0
+        posIndexMap = map1,
+        posAdjMap = map2,
+        boundX = snd $ getBounds newGrid,
+        boundY= fst $ getBounds newGrid
     }
 
     play window backgroundColor 60 initialGame gameAsPicture handleInput transformGame

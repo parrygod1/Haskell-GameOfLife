@@ -36,12 +36,3 @@ getCmd g h gen = do
 -}
 
 
-
-
-
-readGrid :: Integer -> Integer -> IO ()
-readGrid boundX boundY = do 
-    putStrLn "Enter input file: "
-    file <- getLine
-    contents <- readFile file 
-    putStrLn (stringGrid (parseGrid contents 0 0) boundX boundY)
