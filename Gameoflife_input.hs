@@ -19,66 +19,82 @@ keyLeft = Char 'a'
 keyRight = Char 'd'
 keyReset = Char 'r'
 keyExport = Char 'e'
+keyInsert = Char 'q'
 
-handleInput :: Event -> Game -> Game
-handleInput (EventKey (MouseButton LeftButton) Up _ (mouseX, mouseY)) game = game { grid = setCell (grid game) line col }
-                    where 
-                        line =  ((abs resY) `div` (floatToInt mouseY)) `div` 10
-                        col = ((abs resX) `div` (floatToInt mouseX)) `div` 10
-handleInput (EventKey k Down _ _) game = game { kbkeys = S.insert k (kbkeys game)}
-handleInput (EventKey k Up _ _) game = game { kbkeys = S.delete k (kbkeys game)}
-handleInput _ game = game
+handleInput :: Event -> Game -> IO Game
+handleInput (EventKey k Down _ _) game = return (game { kbkeys = S.insert k (kbkeys game)})
+handleInput (EventKey k Up _ _) game = 
+    if k == keyExport then
+        do
+            writeFile "grid_export" (stringGrid (grid game) (boundY game) (boundX game))
+            return game
+        else 
+            return (game { kbkeys = S.delete k (kbkeys game)})
+handleInput _ game = return (game)
 
-transformGame :: Float -> Game -> Game
+transformGame :: Float -> Game -> IO Game
 transformGame _ game 
+    --advance generation
     | S.member keyNext (kbkeys game) = do
-        game {  
-                history = (history game)A.//[(generation game, grid game)],
+        return game {  
+                history = addToHistory game,
                 historySize = incrementHistSize game,         
                 generation = (generation game) + 1,
                 grid = nextGeneration game ((generation game) + 1),
                 kbkeys = S.delete keyNext (kbkeys game)
             }
+    --previous generation
     | S.member keyPrev (kbkeys game) = do
-        game { 
-                generation = subtractGeneration game, 
-                grid = previousGeneration game, 
-                history = history game,
-                historySize = historySize game
-                --,kbkeys = S.delete keyPrev (kbkeys game)
-            }
+        if (generation game > 0) then
+            return game { 
+                    generation = subtractGeneration game, 
+                    grid = previousGeneration game, 
+                    history = history game,
+                    historySize = historySize game
+                    ,kbkeys = S.delete keyPrev (kbkeys game)
+                }
+        else return game
+    --reset to history[0]
     | S.member keyReset (kbkeys game) = do
-        game{
-                generation = 0,
-                history = listArray (0, 1000) [],
-                historySize = 0,
-                kbkeys = S.delete keyReset (kbkeys game)
-        }
-    | S.member (MouseButton LeftButton) (kbkeys game) = do
-        game {
-                kbkeys = S.delete (MouseButton LeftButton) (kbkeys game)
+        if (historySize game > 0) then
+            return game{
+                    generation = 0,
+                    grid = (history game) A.! fst (bounds (history game)),
+                    kbkeys = S.delete keyReset (kbkeys game)
             }
+        else return game
+    --insert cell in middle
+    | S.member keyInsert (kbkeys game) = do
+            return game{
+                    grid = setCell (grid game) (boundY game `div` 2) (boundX game `div` 2),
+                    kbkeys = S.delete keyInsert (kbkeys game)
+            }
+    --unused mouse input
+    {-| S.member (MouseButton LeftButton) (kbkeys game) = do
+        return game {
+                kbkeys = S.delete (MouseButton LeftButton) (kbkeys game)
+            }-}
     | S.member keyLeft (kbkeys game) = do
-        game {
+        return game {
                 grid = shiftGrid game dirLeft
-                --,kbkeys = S.delete keyLeft (kbkeys game)
+                ,kbkeys = S.delete keyLeft (kbkeys game)
         }
     | S.member keyRight (kbkeys game) = do
-        game {
+        return game {
                 grid = shiftGrid game dirRight
-                --,kbkeys = S.delete keyRight (kbkeys game)
+                ,kbkeys = S.delete keyRight (kbkeys game)
         }
     | S.member keyUp (kbkeys game) = do
-        game {
+        return game {
                 grid = shiftGrid game dirUp
-                --,kbkeys = S.delete keyUp (kbkeys game)
+                ,kbkeys = S.delete keyUp (kbkeys game)
         }
     | S.member keyDown (kbkeys game) = do
-        game {
+        return game {
                 grid = shiftGrid game dirDown
-                --,kbkeys = S.delete keyDown (kbkeys game)
+                ,kbkeys = S.delete keyDown (kbkeys game)
         }
-    | otherwise = game
+    | otherwise = return game
     where 
         dirLeft = (0, -1)
         dirRight = (0, 1)

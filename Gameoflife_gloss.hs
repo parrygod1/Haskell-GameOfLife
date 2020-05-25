@@ -8,12 +8,19 @@ module Gameoflife_gloss (
             posIndexMap,
             posAdjMap,
             boundX,
-            boundY
+            boundY,
+            areaOffset,
+            squareSize,
+            bOffX,
+            bOffY,
+            clickX,
+            clickY
     ),
     nextGeneration,
     previousGeneration,
     subtractGeneration,
     incrementHistSize,
+    addToHistory,
     shiftGrid
 ) where
 
@@ -31,24 +38,28 @@ data Game = Game { kbkeys :: S.Set Key,
                     posIndexMap :: Map GridPoint Int,
                     posAdjMap :: Map GridPoint [Int],
                     boundX :: Integer,
-                    boundY :: Integer }
+                    boundY :: Integer,
+                    areaOffset :: Integer,
+                    squareSize :: Float,
+                    bOffX :: Integer,
+                    bOffY :: Integer,
+                    clickX :: Float,
+                    clickY :: Float }
 
 nextGeneration :: Game -> Integer -> Grid
-nextGeneration game gen = if gen < (historySize game)-1 then
+nextGeneration game gen = if gen < (historySize game) then
                           (history game) A.! ((generation game)+1)
                         else
                             progressMatrix (grid game) (grid game) (posAdjMap game)
-       
+
 previousGeneration :: Game -> Grid
-previousGeneration game = if (generation game) > 0 then
+previousGeneration game = if (generation game) > fst (bounds (history game)) then
                              (history game) A.! ((generation game)-1)
                         else
-                            if historySize game > 0 then
-                                (history game) A.! 0
-                            else []
+                            (history game) A.! (generation game)
 
 subtractGeneration :: Game -> Integer
-subtractGeneration game = if generation game > 0 then (generation game) - 1 else (generation game)
+subtractGeneration game = if generation game > fst (bounds (history game)) then (generation game) - 1 else (generation game)
 
 incrementHistSize :: Game -> Integer
 incrementHistSize game = if (generation game) - 1 < (historySize game)-1 then
@@ -56,7 +67,16 @@ incrementHistSize game = if (generation game) - 1 < (historySize game)-1 then
                         else
                             (historySize game) + 1
 
---Use a map to quickly access index of a point calculated from the direction we want to move
+--if array is larger than 200 reset history
+addToHistory :: Game -> Array Integer Grid
+addToHistory game = if (historySize game == 200) then
+                        do
+                            let h = listArray (generation game, (generation game) + 200) []
+                            h A.//[(generation game, grid game)]
+                    else 
+                        (history game)A.//[(generation game, grid game)]
+
+--Use a map to quickly access index of a coord calculated from the direction we want to move
 adjDirectionCell :: (GridPoint, Cell) -> Game -> GridPoint -> Integer -> Integer -> (GridPoint, Cell)
 adjDirectionCell ((a, b), cell) game (d1, d2) boundL boundC = --bounds for lines and columns
     if a+d1 >= 0 && a+d1 <= boundL && b+d2 >= 0 && b+d2 <= boundC then

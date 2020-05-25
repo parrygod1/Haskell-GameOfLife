@@ -2,7 +2,6 @@ module Gameoflife(
     Cell(Alive, Dead),
     GridPoint,
     Grid,
-    History,
     Generation,
     initGrid,
     stringGrid,
@@ -19,7 +18,6 @@ import Data.Map as M
 data Cell = Alive | Dead deriving (Eq, Ord)
 type GridPoint = (Integer, Integer)
 type Grid = [ (GridPoint, Cell) ]
-type History = [Grid]
 type Generation = Integer
 
 instance Show Cell where
@@ -113,19 +111,22 @@ setCell (((l, c), cell) : rest) line col = if l == line && c == col then
                                         [((l, c), cell)] ++ (setCell rest line col)
 setCell grid _ _ = grid 
 
---driver function; should be used in main
+--init function; should be used to calc memo maps
+{-
 readGrid :: Integer -> Integer -> IO ()
 readGrid boundX boundY = do 
     putStrLn "Enter input file: "
     file <- getLine
     contents <- readFile file 
-    --let newGrid = (parseGrid contents 0 0)
-    --let map1 = M.fromList (getPointList newGrid 0)
-    --let map2 = M.fromList (calcAllAdjacents newGrid map1)
+    let newGrid = (parseGrid contents 0 0)
+    let map1 = M.fromList (getPointList newGrid 0)
+    let map2 = M.fromList (calcAllAdjacents newGrid map1)
     putStrLn (stringGrid (parseGrid contents 0 0) boundX boundY)
+-}
 
+
+--basic console setup
 {-
---console commands
 getCmd :: Grid -> History -> Generation -> IO()
 getCmd g h gen = do
     c <- getChar
