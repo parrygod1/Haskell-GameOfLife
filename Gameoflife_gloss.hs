@@ -92,4 +92,3 @@ calcShiftedGrid _ _ _ = []
 shiftGrid :: Game -> (Integer, Integer) -> Grid
 shiftGrid game direction = calcShiftedGrid (grid game) game direction
 
-

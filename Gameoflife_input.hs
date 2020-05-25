@@ -5,6 +5,7 @@ module Gameoflife_input (
 
 import Data.Set as S
 import Data.Array as A
+import Data.Map as M
 import Graphics.Gloss
 import Graphics.Gloss.Interface.IO.Game
 import Gameoflife
@@ -20,16 +21,17 @@ keyRight = Char 'd'
 keyReset = Char 'r'
 keyExport = Char 'e'
 keyInsert = Char 'q'
+keyNew = Char 'n'
 
 handleInput :: Event -> Game -> IO Game
 handleInput (EventKey k Down _ _) game = return (game { kbkeys = S.insert k (kbkeys game)})
-handleInput (EventKey k Up _ _) game = 
-    if k == keyExport then
+handleInput (EventKey k Up _ _) game
+    | k == keyNew = initAll
+    | k == keyExport =
         do
             writeFile "grid_export" (stringGrid (grid game) (boundY game) (boundX game))
             return game
-        else 
-            return (game { kbkeys = S.delete k (kbkeys game)})
+    | otherwise = return (game { kbkeys = S.delete k (kbkeys game)})
 handleInput _ game = return (game)
 
 transformGame :: Float -> Game -> IO Game

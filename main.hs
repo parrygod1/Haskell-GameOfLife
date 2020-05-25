@@ -9,13 +9,6 @@ import Gameoflife_gloss
 import Gameoflife_input
 import Gameoflife_render
 
---weird conditions to fit the grid
-calcSquareSize :: Integer -> Float
-calcSquareSize bounds = if bounds <= 20 then 30.0 else intToFloat $ bounds - 10
-
-calcAreaOff :: Integer -> Integer
-calcAreaOff bounds = if bounds <= 20 then 0 else bounds `div` 7
-
 main :: IO ()
 main = do
     putStrLn "Enter input file: "
