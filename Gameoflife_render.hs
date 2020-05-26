@@ -5,11 +5,7 @@ module Gameoflife_render (
     calcAreaOff,
     calcSquareSize,
     initAll,
-    
-    floatToInt,
-    intToFloat,
-    mulIntFloat,
-    
+
     resX,
     resY,
     squareSize,
@@ -34,6 +30,7 @@ resY = 800
 backgroundColor = white
 window = InWindow "Game of Life" (fromInteger resX, fromInteger resY) (500, 200)
 
+
 gridToPictures :: Grid -> Game -> [Picture]
 gridToPictures (((line, col), cell) : rest) game = 
     if line >= (areaOffset game) && line <= (boundY game) - (areaOffset game) 
@@ -57,24 +54,25 @@ generationAsPicture game = translate xcoord ycoord $ scale 0.15 0.15 $ color bla
                             ++ " | Total " ++ show (fromIntegral (historySize game))
                         where 
                             xcoord = -100
-                            ycoord = intToFloat $ (resY `div` 2) - 20
+                            ycoord = fromInteger $ (resY `div` 2) - 20
 
 instructionsAsPicture :: Game -> Picture
 instructionsAsPicture game = translate xcoord ycoord $ scale 0.15 0.15 $ color black $ text $ 
                             "WASD move | F next | B previous | Q insert | R reset | E export | N new"
                         where 
                             xcoord = -390
-                            ycoord = intToFloat $ (-1) * (resY `div` 2) + 20
+                            ycoord = fromInteger $ (-1) * (resY `div` 2) + 20
 
 gameAsPicture :: Game -> IO Picture
 gameAsPicture game = return $ Pictures ((gridToPictures (grid game) game) ++ [(generationAsPicture game)] ++ [(instructionsAsPicture game)])
 
 calcSquareSize :: Integer -> Float
-calcSquareSize bounds = if bounds <= 20 then 30.0 else intToFloat $ resX `div` (bounds-3)
+calcSquareSize bounds = if bounds <= 20 then 30.0 else fromInteger $ resX `div` (bounds-3)
 
 calcAreaOff :: Integer -> Integer
 calcAreaOff bounds = if bounds <= 20 then 0 else bounds `div` 7
 
+--used to load new grid in handleInput
 initAll = do
         putStrLn "Enter input file: "
         file <- getLine
@@ -110,11 +108,5 @@ initAll = do
 
 
 --utils
-intToFloat :: Integer -> Float
-intToFloat i = fromIntegral i 
-
-floatToInt :: Float -> Integer
-floatToInt f = toInteger $ round f
-
 mulIntFloat :: Integer -> Float -> Float
-mulIntFloat i f = intToFloat $ i * (floatToInt f)
+mulIntFloat i f = (fromInteger i) * f

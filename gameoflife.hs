@@ -15,7 +15,7 @@ module Gameoflife(
 
 import Data.Map as M
 
-data Cell = Alive | Dead deriving (Eq, Ord)
+data Cell = Alive | Dead deriving (Eq)
 type GridPoint = (Integer, Integer)
 type Grid = [ (GridPoint, Cell) ]
 type Generation = Integer
@@ -87,9 +87,9 @@ parseGrid _ _ _ = []
 
 --converts grid to a console printable string
 stringGrid :: Grid -> Integer -> Integer -> String
-stringGrid (((x,y), cell) : rest) boundX boundY = 
-    if y == boundY then show cell ++ "\n" ++ (stringGrid rest boundX boundY)
-    else show cell ++ (stringGrid rest boundX boundY)
+stringGrid (((x,y), cell) : rest) boundX boundY 
+    | y == boundY = show cell ++ "\n" ++ (stringGrid rest boundX boundY)
+    | otherwise =  show cell ++ (stringGrid rest boundX boundY)
 stringGrid _ _ _= ""
 
 --returns a list with grid points and their index in the main grid
